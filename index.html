@@ -54,8 +54,8 @@
             <div class="relative">
                 <textarea 
                     id="searchInput" 
-                    placeholder="输入 Tailwind 类名 (如: bg-blue-500) 或 CSS 样式 (支持多行，如: background-color: blue; padding: 1rem;)" 
-                    class="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors resize-y min-h-[60px]"
+                    placeholder="输入 Tailwind 类名 (如: bg-blue-500) 或 CSS 属性 (如: background-color) 进行搜索" 
+                    class="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors resize-y min-h-[220px]"
                     rows="2"
                     autocomplete="off"
                 ></textarea>
@@ -602,6 +602,18 @@
             };
         }
 
+        // Update placeholder based on mode
+        function updatePlaceholder() {
+            const mode = getCurrentMode();
+            const searchInput = document.getElementById('searchInput');
+            
+            if (mode === 'convert') {
+                searchInput.placeholder = '输入多行 CSS 样式进行转换，例如：\nbackground-color: blue;\npadding: 1rem;\nmargin: 0.5rem;';
+            } else {
+                searchInput.placeholder = '输入 Tailwind 类名 (如: bg-blue-500) 或 CSS 属性 (如: background-color) 进行搜索';
+            }
+        }
+
         // Event listeners
         document.getElementById('searchInput').addEventListener('input', debounce((e) => {
             processInput(e.target.value);
@@ -610,6 +622,7 @@
         // Mode change listener
         document.querySelectorAll('input[name="searchMode"]').forEach(radio => {
             radio.addEventListener('change', () => {
+                updatePlaceholder();
                 const input = document.getElementById('searchInput').value;
                 if (input.trim()) {
                     processInput(input);
