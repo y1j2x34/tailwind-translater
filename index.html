@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tailwind CSS ⇄ CSS 转换器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-out;
+        }
+        .result-item {
+            transition: all 0.2s ease;
+        }
+        .result-item:hover {
+            transform: translateX(4px);
+        }
+        .copy-btn {
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .result-item:hover .copy-btn {
+            opacity: 1;
+        }
+        .tooltip {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            animation: fadeIn 0.2s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+        <header class="text-center mb-12 fade-in">
+            <h1 class="text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-3">
+                Tailwind CSS Translator
+            </h1>
+            <p class="text-gray-600 text-lg">双向转换 Tailwind CSS 类名与原生 CSS 样式</p>
+        </header>
+
+        <!-- Search Box -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-8 fade-in">
+            <div class="relative">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="输入 Tailwind 类名 (如: bg-blue-500) 或 CSS 样式 (如: background-color)" 
+                    class="w-full px-6 py-4 text-lg border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:outline-none transition-colors"
+                    autocomplete="off"
+                >
+                <div class="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+            
+            <!-- Stats -->
+            <div class="flex items-center justify-between mt-4 text-sm text-gray-500">
+                <span id="statsInfo">加载中...</span>
+                <span id="resultCount" class="font-semibold"></span>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="resultsContainer" class="space-y-3">
+            <!-- Welcome message -->
+            <div id="welcomeMessage" class="bg-white rounded-xl shadow-md p-8 text-center fade-in">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">开始搜索</h3>
+                <p class="text-gray-600">在上方输入框中输入 Tailwind 类名或 CSS 属性来查找对应的转换结果</p>
+                <div class="mt-6 flex flex-wrap justify-center gap-2">
+                    <button onclick="document.getElementById('searchInput').value='bg-blue-500'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                            class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm">
+                        bg-blue-500
+                    </button>
+                    <button onclick="document.getElementById('searchInput').value='flex'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                            class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm">
+                        flex
+                    </button>
+                    <button onclick="document.getElementById('searchInput').value='text-center'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                            class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm">
+                        text-center
+                    </button>
+                    <button onclick="document.getElementById('searchInput').value='margin'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                            class="px-4 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-colors text-sm">
+                        margin
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 text-gray-500 text-sm">
+            <p>Made with ❤️ using Tailwind CSS</p>
+        </footer>
+    </div>
+
+    <script>
+        let tailwindData = {};
+        let isLoading = true;
+
+        // Load JSON data
+        async function loadData() {
+            try {
+                const response = await fetch('tailwind-classes-style-map.json');
+                tailwindData = await response.json();
+                const count = Object.keys(tailwindData).length;
+                document.getElementById('statsInfo').textContent = `已加载 ${count.toLocaleString()} 条 Tailwind 类映射`;
+                isLoading = false;
+            } catch (error) {
+                document.getElementById('statsInfo').textContent = '加载数据失败，请刷新页面重试';
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // Search function
+        function search(query) {
+            if (!query.trim() || isLoading) {
+                showWelcomeMessage();
+                return;
+            }
+
+            const results = [];
+            const lowerQuery = query.toLowerCase().trim();
+
+            // Search in both keys and values
+            for (const [tailwindClass, cssStyle] of Object.entries(tailwindData)) {
+                const matchScore = getMatchScore(lowerQuery, tailwindClass, cssStyle);
+                if (matchScore > 0) {
+                    results.push({ tailwindClass, cssStyle, score: matchScore });
+                }
+            }
+
+            // Sort by score (higher is better)
+            results.sort((a, b) => b.score - a.score);
+
+            // Limit results to top 100 for performance
+            const limitedResults = results.slice(0, 100);
+            displayResults(limitedResults, query);
+        }
+
+        // Calculate match score
+        function getMatchScore(query, tailwindClass, cssStyle) {
+            const lowerTailwind = tailwindClass.toLowerCase();
+            const lowerCss = cssStyle.toLowerCase();
+
+            // Exact match (highest score)
+            if (lowerTailwind === query) return 1000;
+            if (lowerCss.includes(query + ':')) return 900;
+
+            // Starts with (high score)
+            if (lowerTailwind.startsWith(query)) return 800;
+            if (lowerCss.startsWith(query)) return 700;
+
+            // Contains (medium score)
+            if (lowerTailwind.includes(query)) return 500;
+            if (lowerCss.includes(query)) return 400;
+
+            return 0;
+        }
+
+        // Display results
+        function displayResults(results, query) {
+            const container = document.getElementById('resultsContainer');
+            const resultCount = document.getElementById('resultCount');
+
+            if (results.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-md p-8 text-center fade-in">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">未找到结果</h3>
+                        <p class="text-gray-600">试试其他关键词，比如 "flex"、"bg-" 或 "margin"</p>
+                    </div>
+                `;
+                resultCount.textContent = '';
+                return;
+            }
+
+            const total = results.length;
+            const hasMore = total === 100;
+            resultCount.textContent = hasMore ? `显示前 100 条结果` : `找到 ${total} 条结果`;
+
+            const html = results.map((result, index) => `
+                <div class="result-item bg-white rounded-xl shadow-md p-5 hover:shadow-lg fade-in" style="animation-delay: ${Math.min(index * 0.02, 0.5)}s">
+                    <div class="flex items-start justify-between gap-4">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg font-mono text-sm font-semibold">
+                                    ${escapeHtml(result.tailwindClass)}
+                                </span>
+                                <button onclick="copyToClipboard('${escapeHtml(result.tailwindClass).replace(/'/g, "\\'")}', event)" 
+                                        class="copy-btn p-1.5 hover:bg-gray-100 rounded transition-colors" title="复制">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <code class="block px-3 py-2 bg-gray-50 rounded-lg text-gray-700 font-mono text-sm flex-1 overflow-x-auto">
+                                    ${escapeHtml(result.cssStyle)}
+                                </code>
+                                <button onclick="copyToClipboard('${escapeHtml(result.cssStyle).replace(/'/g, "\\'")}', event)" 
+                                        class="copy-btn p-1.5 hover:bg-gray-100 rounded transition-colors flex-shrink-0" title="复制">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            container.innerHTML = html;
+        }
+
+        // Show welcome message
+        function showWelcomeMessage() {
+            document.getElementById('welcomeMessage').style.display = 'block';
+            document.getElementById('resultsContainer').innerHTML = `
+                <div id="welcomeMessage" class="bg-white rounded-xl shadow-md p-8 text-center fade-in">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    <h3 class="text-xl font-semibold text-gray-800 mb-2">开始搜索</h3>
+                    <p class="text-gray-600">在上方输入框中输入 Tailwind 类名或 CSS 属性来查找对应的转换结果</p>
+                    <div class="mt-6 flex flex-wrap justify-center gap-2">
+                        <button onclick="document.getElementById('searchInput').value='bg-blue-500'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                                class="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors text-sm">
+                            bg-blue-500
+                        </button>
+                        <button onclick="document.getElementById('searchInput').value='flex'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                                class="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-lg hover:bg-indigo-200 transition-colors text-sm">
+                            flex
+                        </button>
+                        <button onclick="document.getElementById('searchInput').value='text-center'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                                class="px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors text-sm">
+                            text-center
+                        </button>
+                        <button onclick="document.getElementById('searchInput').value='margin'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                                class="px-4 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-colors text-sm">
+                            margin
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('resultCount').textContent = '';
+        }
+
+        // Copy to clipboard
+        async function copyToClipboard(text, event) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showTooltip('已复制!', event);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                showTooltip('复制失败', event);
+            }
+        }
+
+        // Show tooltip
+        function showTooltip(message, event) {
+            const tooltip = document.createElement('div');
+            tooltip.className = 'tooltip';
+            tooltip.textContent = message;
+            tooltip.style.left = event.pageX + 'px';
+            tooltip.style.top = (event.pageY - 30) + 'px';
+            document.body.appendChild(tooltip);
+
+            setTimeout(() => {
+                tooltip.remove();
+            }, 1500);
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Debounce function
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', debounce((e) => {
+            search(e.target.value);
+        }, 300));
+
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>
+
