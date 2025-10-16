@@ -2,23 +2,15 @@
 
 一个优雅的双向转换工具，用于在 Tailwind CSS 类名和原生 CSS 样式之间进行转换。
 
-## ✨ 特性
-
-- 🔄 **双向搜索**: 支持通过 Tailwind 类名查找 CSS，或通过 CSS 属性查找 Tailwind 类名
-- ⚡ **实时搜索**: 输入即搜索，快速响应
-- 🎨 **美观界面**: 使用 Tailwind CSS 设计的现代化 UI
-- 📋 **一键复制**: 点击即可复制类名或样式
-- 📱 **响应式设计**: 完美支持移动端和桌面端
-
 ## 🚀 在线访问
 
-访问 [GitHub Pages](https://你的用户名.github.io/tailwind-translater/) 查看在线版本
+访问 [GitHub Pages](https://y1j2x34.github.io/tailwind-translater/) 查看在线版本
 
 ## 📦 本地运行
 
 1. 克隆仓库:
 ```bash
-git clone https://github.com/你的用户名/tailwind-translater.git
+git clone https://github.com/y1j2x34/tailwind-translater.git
 cd tailwind-translater
 ```
 
@@ -30,62 +22,13 @@ python -m http.server 8000
 # 使用 Node.js
 npx http-server
 
-# 或直接在浏览器中打开 index.html
 ```
 
 3. 在浏览器中访问 `http://localhost:8000`
 
-## 🔧 部署到 GitHub Pages
-
-### 自动部署（推荐）
-
-本项目已配置 GitHub Actions 自动部署。按照以下步骤操作：
-
-1. **推送代码到 GitHub**:
-```bash
-git add .
-git commit -m "Initial commit"
-git push origin main
-```
-
-2. **启用 GitHub Pages**:
-   - 进入仓库的 Settings → Pages
-   - 在 "Source" 下选择 "GitHub Actions"
-   - 保存设置
-
-3. **触发部署**:
-   - 每次推送到 `main` 分支时会自动触发部署
-   - 也可以在 Actions 标签页手动触发工作流
-
-4. **访问网站**:
-   - 部署完成后，访问 `https://你的用户名.github.io/tailwind-translater/`
-
-### 手动部署
-
-如果你想手动部署，可以直接将以下文件上传到 `gh-pages` 分支：
-- index.html
-- tailwind-classes-style-map.json
-
-## 📁 项目结构
-
-```
-tailwind-translater/
-├── index.html                          # 主页面
-├── tailwind-classes-style-map.json    # Tailwind 类名映射数据
-├── .github/
-│   └── workflows/
-│       └── deploy.yml                 # GitHub Actions 部署配置
-└── README.md                          # 项目说明
-```
-
-## 🛠️ 技术栈
-
-- **HTML5**: 页面结构
-- **Tailwind CSS**: 样式框架（通过 CDN）
-- **原生 JavaScript**: 搜索和交互逻辑
-- **GitHub Actions**: 自动化部署
-
 ## 💡 使用示例
+
+### 搜索模式
 
 1. **搜索 Tailwind 类名**:
    - 输入: `bg-blue-500`
@@ -95,8 +38,25 @@ tailwind-translater/
    - 输入: `margin`
    - 结果: 显示所有包含 margin 的 Tailwind 类名
 
-3. **一键复制**:
-   - 悬停在结果上时，点击复制按钮即可复制到剪贴板
+### CSS转换模式
+
+1. **单行CSS转换**:
+   - 输入: `background-color: blue;`
+   - 结果: 推荐的 Tailwind 类名（如 `bg-blue-500`）
+
+2. **多行CSS转换**:
+   ```css
+   background-color: rgb(59 130 246);
+   padding: 1rem;
+   margin: 0.5rem;
+   display: flex;
+   ```
+   - 结果: `bg-blue-500 p-4 m-2 flex`（组合所有对应的 Tailwind 类名）
+
+3. **智能匹配**:
+   - 精确匹配：显示完全对应的 Tailwind 类名（绿色标签）
+   - 相似匹配：显示最接近的 Tailwind 类名（黄色标签）
+   - 无匹配：提示使用 Tailwind 任意值语法
 
 ## 📝 数据来源
 
@@ -109,8 +69,4 @@ tailwind-translater/
 ## 📄 许可证
 
 MIT License
-
-## 👨‍💻 作者
-
-Created with ❤️ using Tailwind CSS
 
