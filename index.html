@@ -73,8 +73,12 @@
                     <span class="text-sm text-gray-700">搜索模式</span>
                 </label>
                 <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="radio" name="searchMode" value="tailwind-to-css" class="w-4 h-4 text-indigo-600">
+                    <span class="text-sm text-gray-700">Tailwind转CSS</span>
+                </label>
+                <label class="flex items-center gap-2 cursor-pointer">
                     <input type="radio" name="searchMode" value="convert" class="w-4 h-4 text-indigo-600">
-                    <span class="text-sm text-gray-700">CSS转换模式</span>
+                    <span class="text-sm text-gray-700">CSS转Tailwind</span>
                 </label>
             </div>
             
@@ -94,7 +98,7 @@
                 </svg>
                 <h3 class="text-xl font-semibold text-gray-800 mb-2">开始搜索或转换</h3>
                 <p class="text-gray-600 mb-4">在上方输入框中输入 Tailwind 类名或 CSS 属性来查找对应的转换结果</p>
-                <p class="text-sm text-gray-500 mb-6">💡 切换到"CSS转换模式"可以将多行CSS样式转换为Tailwind类名</p>
+                <p class="text-sm text-gray-500 mb-6">💡 切换到"Tailwind转CSS"可以将多个Tailwind类名转换为CSS样式<br>💡 切换到"CSS转Tailwind"可以将CSS样式转换为Tailwind类名</p>
                 
                 <div class="space-y-4">
                     <div>
@@ -120,11 +124,21 @@
                     </div>
                     
                     <div>
-                        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">CSS转换模式示例</p>
+                        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Tailwind转CSS示例</p>
                         <div class="flex flex-wrap justify-center gap-2">
-                            <button onclick="document.querySelectorAll('input[name=searchMode]')[1].checked=true; document.getElementById('searchInput').value='background-color: blue;\\npadding: 1rem;\\nmargin: 0.5rem;'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                            <button onclick="document.querySelectorAll('input[name=searchMode]')[1].checked=true; document.getElementById('searchInput').value='px-4 py-2 bg-pink-100'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                                    class="px-4 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-colors text-sm">
+                                试试Tailwind转CSS
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase mb-2">CSS转Tailwind示例</p>
+                        <div class="flex flex-wrap justify-center gap-2">
+                            <button onclick="document.querySelectorAll('input[name=searchMode]')[2].checked=true; document.getElementById('searchInput').value='background-color: blue;\\npadding: 1rem;\\nmargin: 0.5rem;'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
                                     class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm">
-                                试试CSS转换
+                                试试CSS转Tailwind
                             </button>
                         </div>
                     </div>
@@ -192,6 +206,8 @@
             const mode = getCurrentMode();
             if (mode === 'convert') {
                 convertCssToTailwind(input);
+            } else if (mode === 'tailwind-to-css') {
+                convertTailwindToCSS(input);
             } else {
                 search(input);
             }
@@ -216,6 +232,90 @@
             // Limit results to top 100 for performance
             const limitedResults = results.slice(0, 100);
             displayResults(limitedResults, query);
+        }
+
+        // Convert Tailwind to CSS
+        function convertTailwindToCSS(tailwindInput) {
+            // Split by whitespace and filter out empty strings
+            const tailwindClasses = tailwindInput.trim().split(/\s+/).filter(c => c.length > 0);
+            const conversions = [];
+
+            for (const twClass of tailwindClasses) {
+                // First try exact match
+                let cssStyle = tailwindData[twClass];
+                
+                // If no exact match, try template matching
+                if (!cssStyle) {
+                    const templateMatch = findTemplateMatch(twClass);
+                    if (templateMatch) {
+                        cssStyle = templateMatch;
+                    }
+                }
+                
+                conversions.push({
+                    tailwindClass: twClass,
+                    cssStyle: cssStyle || null
+                });
+            }
+
+            displayTailwindToCssResults(conversions, tailwindClasses);
+        }
+
+        // Find template match for a Tailwind class
+        function findTemplateMatch(twClass) {
+            // Try to match against template patterns in tailwindData
+            for (const [template, cssTemplate] of Object.entries(tailwindData)) {
+                // Check if template contains placeholders
+                if (template.includes('<') && template.includes('>')) {
+                    const regex = templateToRegex(template);
+                    const match = twClass.match(regex);
+                    
+                    if (match) {
+                        // Extract the values from the match
+                        const values = extractValues(template, twClass, match);
+                        
+                        // Replace placeholders in CSS template
+                        let result = cssTemplate;
+                        for (const [placeholder, value] of Object.entries(values)) {
+                            result = result.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+                        }
+                        
+                        return result;
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // Convert template pattern to regex
+        function templateToRegex(template) {
+            // Escape special regex characters except < and >
+            let pattern = template.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            
+            // Replace common placeholders with regex patterns
+            pattern = pattern.replace(/<number>/g, '(\\d+(?:\\.\\d+)?)');
+            pattern = pattern.replace(/<ratio>/g, '([\\d\\.]+(?:\\/[\\d\\.]+)?)');
+            pattern = pattern.replace(/<value>/g, '(.+?)');
+            pattern = pattern.replace(/<custom-property>/g, '(--[\\w-]+)');
+            pattern = pattern.replace(/<[^>]+>/g, '([\\w-]+)');
+            
+            return new RegExp('^' + pattern + '$');
+        }
+
+        // Extract values from template match
+        function extractValues(template, twClass, match) {
+            const values = {};
+            const placeholders = template.match(/<[^>]+>/g) || [];
+            
+            // Map matched groups to placeholders
+            for (let i = 0; i < placeholders.length; i++) {
+                if (match[i + 1] !== undefined) {
+                    values[placeholders[i]] = match[i + 1];
+                }
+            }
+            
+            return values;
         }
 
         // Convert CSS to Tailwind
@@ -324,6 +424,22 @@
 
             // Exact match (highest score)
             if (lowerTailwind === query) return 1000;
+            
+            // Check if query matches a complete word in tailwind class
+            // For example, "px-4" should match "px-4" exactly, not "px-40"
+            const words = lowerTailwind.split(/[\s\-/:]+/);
+            const queryWords = query.split(/[\s\-/:]+/);
+            
+            // All query words match as complete segments
+            let allWordsMatch = true;
+            for (const qWord of queryWords) {
+                if (!words.includes(qWord)) {
+                    allWordsMatch = false;
+                    break;
+                }
+            }
+            if (allWordsMatch && queryWords.length > 0) return 950;
+            
             if (lowerCss.includes(query + ':')) return 900;
 
             // Starts with (high score)
@@ -335,6 +451,119 @@
             if (lowerCss.includes(query)) return 400;
 
             return 0;
+        }
+
+        // Display Tailwind to CSS results
+        function displayTailwindToCssResults(conversions, originalClasses) {
+            const container = document.getElementById('resultsContainer');
+            const resultCount = document.getElementById('resultCount');
+
+            if (conversions.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-white rounded-xl shadow-md p-8 text-center fade-in">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">请输入Tailwind类名</h3>
+                        <p class="text-gray-600">例如：px-4 py-2 bg-pink-100</p>
+                    </div>
+                `;
+                resultCount.textContent = '';
+                return;
+            }
+
+            // Collect all CSS styles
+            const allCssStyles = conversions
+                .filter(c => c.cssStyle)
+                .map(c => c.cssStyle);
+            
+            const foundCount = conversions.filter(c => c.cssStyle).length;
+            const notFoundCount = conversions.length - foundCount;
+            
+            resultCount.textContent = `转换了 ${conversions.length} 个类名 (${foundCount} 个成功${notFoundCount > 0 ? `, ${notFoundCount} 个未找到` : ''})`;
+
+            // Summary section with combined CSS
+            let html = '';
+            if (allCssStyles.length > 0) {
+                const combinedCss = allCssStyles.join('\n');
+                html += `
+                    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-md p-6 fade-in border-2 border-blue-200">
+                        <div class="flex items-start gap-3 mb-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            <div class="flex-1">
+                                <h3 class="text-lg font-semibold text-blue-900 mb-2">转换后的 CSS 样式</h3>
+                                <div class="flex items-start gap-2 max-w-[780px]">
+                                    <pre class="flex-1 px-4 py-3 bg-white rounded-lg text-gray-800 font-mono text-sm overflow-x-auto border border-blue-200"><code>${escapeHtml(combinedCss)}</code></pre>
+                                    <button onclick="copyToClipboard(\`${combinedCss.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`, event)" 
+                                            class="p-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors flex-shrink-0" title="复制全部">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Detailed conversion for each class
+            html += conversions.map((conv, index) => {
+                const hasMatch = conv.cssStyle !== null;
+                
+                return `
+                    <div class="bg-white rounded-xl shadow-md p-5 fade-in" style="animation-delay: ${Math.min((index + 1) * 0.02, 0.5)}s">
+                        <div class="flex items-start justify-between gap-4">
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-2">
+                                    <span class="text-xs font-semibold text-gray-500 uppercase">Tailwind 类名</span>
+                                </div>
+                                <div class="mb-3">
+                                    <span class="inline-block px-3 py-1 bg-indigo-100 text-indigo-700 rounded-lg font-mono text-sm font-semibold">
+                                        ${escapeHtml(conv.tailwindClass)}
+                                    </span>
+                                </div>
+                                
+                                ${hasMatch ? `
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="text-xs font-semibold text-gray-500 uppercase">CSS 样式</span>
+                                            <span class="text-xs px-2 py-0.5 rounded bg-green-100 text-green-700">
+                                                已找到
+                                            </span>
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <code class="block px-3 py-2 bg-gray-50 rounded-lg text-gray-700 font-mono text-sm flex-1 overflow-x-auto">
+                                                ${escapeHtml(conv.cssStyle)}
+                                            </code>
+                                            <button onclick="copyToClipboard('${escapeHtml(conv.cssStyle).replace(/'/g, "\\'")}', event)" 
+                                                    class="p-1.5 hover:bg-gray-200 rounded transition-colors flex-shrink-0" title="复制">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                ` : `
+                                    <div class="flex items-start gap-2 p-3 bg-amber-50 rounded-lg">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <div>
+                                            <p class="text-sm font-semibold text-amber-800">未找到匹配</p>
+                                            <p class="text-xs text-amber-700">该类名可能不存在或使用了自定义配置</p>
+                                        </div>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = html;
         }
 
         // Display conversion results
@@ -517,7 +746,7 @@
                     </svg>
                     <h3 class="text-xl font-semibold text-gray-800 mb-2">开始搜索或转换</h3>
                     <p class="text-gray-600 mb-4">在上方输入框中输入 Tailwind 类名或 CSS 属性来查找对应的转换结果</p>
-                    <p class="text-sm text-gray-500 mb-6">💡 切换到"CSS转换模式"可以将多行CSS样式转换为Tailwind类名</p>
+                    <p class="text-sm text-gray-500 mb-6">💡 切换到"Tailwind转CSS"可以将多个Tailwind类名转换为CSS样式<br>💡 切换到"CSS转Tailwind"可以将CSS样式转换为Tailwind类名</p>
                     
                     <div class="space-y-4">
                         <div>
@@ -543,11 +772,21 @@
                         </div>
                         
                         <div>
-                            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">CSS转换模式示例</p>
+                            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">Tailwind转CSS示例</p>
                             <div class="flex flex-wrap justify-center gap-2">
-                                <button onclick="document.querySelectorAll('input[name=searchMode]')[1].checked=true; document.getElementById('searchInput').value='background-color: blue;\\npadding: 1rem;\\nmargin: 0.5rem;'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                                <button onclick="document.querySelectorAll('input[name=searchMode]')[1].checked=true; document.getElementById('searchInput').value='px-4 py-2 bg-pink-100'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
+                                        class="px-4 py-2 bg-pink-100 text-pink-700 rounded-lg hover:bg-pink-200 transition-colors text-sm">
+                                    试试Tailwind转CSS
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <p class="text-xs font-semibold text-gray-500 uppercase mb-2">CSS转Tailwind示例</p>
+                            <div class="flex flex-wrap justify-center gap-2">
+                                <button onclick="document.querySelectorAll('input[name=searchMode]')[2].checked=true; document.getElementById('searchInput').value='background-color: blue;\\npadding: 1rem;\\nmargin: 0.5rem;'; document.getElementById('searchInput').dispatchEvent(new Event('input'))" 
                                         class="px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm">
-                                    试试CSS转换
+                                    试试CSS转Tailwind
                                 </button>
                             </div>
                         </div>
@@ -607,7 +846,9 @@
             const mode = getCurrentMode();
             const searchInput = document.getElementById('searchInput');
             
-            if (mode === 'convert') {
+            if (mode === 'tailwind-to-css') {
+                searchInput.placeholder = '输入 Tailwind 类名序列（空格分隔），例如：px-4 py-2 bg-pink-100';
+            } else if (mode === 'convert') {
                 searchInput.placeholder = '输入多行 CSS 样式进行转换，例如：\nbackground-color: blue;\npadding: 1rem;\nmargin: 0.5rem;';
             } else {
                 searchInput.placeholder = '输入 Tailwind 类名 (如: bg-blue-500) 或 CSS 属性 (如: background-color) 进行搜索';
